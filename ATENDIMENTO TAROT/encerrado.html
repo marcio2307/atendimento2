@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Avaliação da Consulta</title>
+  <style>
+    :root{ --bg:#f6f7fb; --txt:#222; --muted:#666; --ok:#23a559; }
+    *{box-sizing:border-box}
+    body{ margin:0; padding:24px; font-family: Arial, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+      background: var(--bg); color: var(--txt); display:flex; min-height:100vh; align-items:center; justify-content:center; }
+    .card{ width:min(920px, 96vw); background:#fff; border-radius:18px; padding:28px; box-shadow: 0 10px 30px rgba(0,0,0,.08); position:relative; }
+    h1{ font-size: clamp(18px, 2.5vw, 28px); text-align:center; line-height:1.25; margin: 6px 8px 20px; }
+    .stars{ display:grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: clamp(10px, 2.5vw, 22px); align-items: end; margin: 10px auto 6px; max-width: 820px; }
+    .star{ appearance:none; border:none; background:transparent; cursor:pointer; display:flex; flex-direction:column; gap:10px; align-items:center; justify-content:center; padding: 6px 4px; transition: transform .12s ease; }
+    .star:focus{ outline: 3px solid rgba(0,0,0,.15); outline-offset: 4px; border-radius: 14px; }
+    .star:hover{ transform: translateY(-2px) scale(1.03); }
+    .svgwrap{ width: clamp(80px, 14vw, 150px); aspect-ratio: 1 / 1; position:relative; }
+    svg{ width:100%; height:100%; display:block; }
+    .label{ font-size: clamp(13px, 2vw, 18px); color:#2b2b2b; font-weight:700; }
+    .desc{ color: var(--muted); font-size: 14px; text-align:center; margin: 4px 0 0; min-height: 20px;}
+    .selected-ring{ position:absolute; inset:-6px; border-radius:22px; pointer-events:none; box-shadow: 0 0 0 0 rgba(0,0,0,.0); transition: box-shadow .18s ease; }
+    .star.selected .selected-ring{ box-shadow: 0 0 0 6px rgba(0,0,0,.08); }
+    .form{ margin-top: 12px; display:grid; gap: 10px; justify-items:center; }
+    textarea{ width:min(820px, 100%); min-height:90px; resize:vertical; padding:12px; border-radius:10px; border:1px solid #e5e7eb; font-size:15px; }
+    .actions{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top: 6px;}
+    .btn{ border:none; padding:12px 18px; border-radius:12px; cursor:pointer; font-weight:800; background: var(--ok); color:#fff; font-size:16px; box-shadow: 0 8px 18px rgba(35,165,89,.25); transition: transform .06s ease, box-shadow .18s ease; letter-spacing:.3px; }
+    .btn:hover{ transform: translateY(-1px); box-shadow: 0 12px 22px rgba(35,165,89,.3); }
+    .thanks{ position:absolute; inset:0; display:none; place-items:center; background: rgba(255,255,255,.96); border-radius:18px; text-align:center; padding: 28px; }
+    .thanks h2{ margin:0 0 8px; color: var(--ok); font-size: clamp(20px, 3vw, 28px); }
+    .thanks p{ margin: 0 0 14px; color:#333 }
+    .home{ display:inline-block; margin-top:6px; text-decoration:none; padding:10px 14px; border-radius:10px; background:#111; color:#fff; font-weight:800; }
+  </style>
+</head>
+<body>
+  <main class="card" role="main">
+    <h1>Em uma escala de 1 a 5 estrelas, como você avaliaria o nosso serviço de atendimento?</h1>
+
+    <section class="stars" id="stars" aria-label="Seletor de avaliação por estrelas"></section>
+    <p class="desc" id="desc"></p>
+
+    <form class="form" id="formAvaliacao">
+      <textarea id="comentario" placeholder="Quer deixar um comentário? (opcional)"></textarea>
+      <div class="actions">
+        <button class="btn" id="sendBtn" type="submit">Enviar avaliação</button>
+      </div>
+    </form>
+
+    <section class="thanks" id="thanksBox" aria-live="polite">
+      <div>
+        <h2>Obrigado pela sua avaliação! 💜</h2>
+        <p>Seu feedback foi recebido.</p>
+        <a class="home" href="https://cartomantesonline.site" target="_top" rel="noopener">Voltar</a>
+      </div>
+    </section>
+  </main>
+
+<script>
+(function(){
+  const faces = [
+    {n:1, label:'Péssimo',  fill:'#c62828', eyes:'#111', mouth:'#111', brow:true},
+    {n:2, label:'Ruim',     fill:'#e53935', eyes:'#111', mouth:'#111'},
+    {n:3, label:'Regular',  fill:'#f6a21a', eyes:'#111', mouth:'#111'},
+    {n:4, label:'Bom',      fill:'#75d12d', eyes:'#0a2', mouth:'#0a2'},
+    {n:5, label:'Excelente',fill:'#34c759', eyes:'#063', mouth:'#063'}
+  ];
+
+  const starsEl = document.getElementById('stars');
+  const descEl  = document.getElementById('desc');
+  const thanks  = document.getElementById('thanksBox');
+  let selected = 0;
+
+  function starSVG({fill, eyes, mouth, brow}){
+    return `<svg viewBox="0 0 100 100" aria-hidden="true">
+      <g><path d="M50 6 L61.8 36.4 L94 38.2 L68 58 L76 90 L50 72 L24 90 L32 58 L6 38.2 L38.2 36.4 Z"
+              fill="${fill}" stroke="rgba(0,0,0,.18)" stroke-width="1.2" /></g>
+      <circle cx="38" cy="45" r="4.2" fill="${eyes}" />
+      <circle cx="62" cy="45" r="4.2" fill="${eyes}" />
+      <path d="M36 60 Q50 ${mouth==='#111' ? 68 : 62} 64 60" fill="none" stroke="${mouth}" stroke-width="4" stroke-linecap="round"/>
+      ${brow ? `<path d="M31 39 q7 -7 15 -2" stroke="${eyes}" stroke-width="3" stroke-linecap="round" fill="none"/>
+               <path d="M54 37 q8 -5 15 2"  stroke="${eyes}" stroke-width="3" stroke-linecap="round" fill="none"/>` : ''}
+    </svg>`;
+  }
+
+  function makeStar(face){
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'star';
+    btn.setAttribute('data-score', face.n);
+    btn.setAttribute('aria-label', face.n + ' - ' + face.label);
+
+    const wrap = document.createElement('div');
+    wrap.className = 'svgwrap';
+    wrap.innerHTML = `<span class="selected-ring"></span>${starSVG(face)}`;
+
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = face.label;
+
+    btn.appendChild(wrap);
+    btn.appendChild(label);
+
+    btn.addEventListener('click', ()=> select(face.n));
+    btn.addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(face.n); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); select(Math.min(5, (selected||1)+1)); }
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); select(Math.max(1, (selected||1)-1)); }
+    });
+    return btn;
+  }
+
+  faces.forEach(f => starsEl.appendChild(makeStar(f)));
+
+  function select(n){
+    selected = n;
+    document.querySelectorAll('.star').forEach(el=> el.classList.toggle('selected', Number(el.dataset.score)===n));
+    const f = faces[n-1];
+    descEl.textContent = `Você marcou ${n} — ${f.label}`;
+  }
+
+  document.getElementById('formAvaliacao').addEventListener('submit', function(e){
+    e.preventDefault();
+    if (!selected){ alert('Escolha uma das 5 estrelas.'); return; }
+    // Só mostra "Obrigado" — sem enviar para servidor
+    thanks.style.display = 'grid';
+  });
+})();
+</script>
+</body>
+</html>

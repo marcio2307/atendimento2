@@ -374,37 +374,94 @@ document.body.setAttribute("data-role", ROLE);
 const rtEl = document.getElementById("roleTitle");
 if (ROLE === "atendente"){ rtEl.textContent = ""; } else { rtEl.textContent = `Atendimento (Cliente) — sala: ${ROOM}`; }
 
-/* ===== AVATAR ===== */
-const DEFAULT_AVATAR = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 96 96"><circle cx="48" cy="32" r="16" fill="%23cccccc"/><rect x="16" y="56" width="64" height="28" rx="14" fill="%23cccccc"/></svg>';
-const AVATAR_KEY = `avatar:${ROOM}`;
-const REMOTE_AVATAR_KEY = `remoteAvatar:${ROOM}`;
-const avatarImg = document.getElementById('avatarImg');
-const avatarPicker = document.getElementById('avatarPicker');
+/* ===== AVATAR + NOMES ATENDENTES ===== */
 
-function setLocalAvatar(dataUrl){ try{ sessionStorage.setItem(AVATAR_KEY, dataUrl); }catch(_){} avatarImg.src = dataUrl; }
-function setRemoteAvatar(dataUrl){ try{ sessionStorage.setItem(REMOTE_AVATAR_KEY, dataUrl); }catch(_){} avatarImg.src = dataUrl; }
+const CONSULTORAS = [
+["Pai Márcio","https://i.ibb.co/RGZzCfFC/Captura-de-tela-2026-04-02-001847.png"],
+["Tamila","https://i.ibb.co/CpsXshgC/Chat-GPT-Image-22-04-2026-15-39-17.png"],
+["Samanta","https://i.ibb.co/dwLc9qZd/Chat-GPT-Image-22-04-2026-15-37-49.png"],
+["Dolores","https://i.ibb.co/5WPJxJg2/Chat-GPT-Image-22-04-2026-15-34-05.png"],
+["Esmeralda","https://i.ibb.co/gbtWvVLK/Chat-GPT-Image-22-04-2026-16-00-28.png"],
+["Janaina","https://i.ibb.co/qMNGBMVn/Chat-GPT-Image-22-04-2026-15-51-04.png"],
+["Pedro","https://i.ibb.co/RTnQqKRg/Chat-GPT-Image-22-04-2026-15-45-42.png"],
+["Beatriz","https://i.ibb.co/sv47czwZ/Chat-GPT-Image-22-04-2026-15-31-29.png"],
+["Carlos","https://i.ibb.co/3yqJ4j8H/Chat-GPT-Image-22-04-2026-16-05-26.png"],
+["Sulamita","https://i.ibb.co/S4VPBfG6/Captura-de-tela-2026-04-22-162135.png"],
+["Adria","https://www.mestresmisticos.com.br/Assets/Imagens/2025/07/25/d6152621b2-1-_3.webp"],
+["M.Padilha","https://i.ibb.co/nNzVYy0j/Captura-de-tela-2026-04-22-160919.png"],
+["Sara","https://i.ibb.co/wrg1bYrY/Captura-de-tela-2026-04-22-161256.png"],
+["7 Saias","https://i.ibb.co/Cs5NrFLp/Captura-de-tela-2026-04-22-161649.png"],
+["Odara","https://i.ibb.co/tf3Q4wX/Captura-de-tela-2026-04-22-161905.png"]
+];
+
+const DEFAULT_AVATAR = CONSULTORAS[0][1];
+
+const AVATAR_KEY = `avatar:${ROOM}`;
+const NAME_KEY   = `name:${ROOM}`;
+const REMOTE_AVATAR_KEY = `remoteAvatar:${ROOM}`;
+const REMOTE_NAME_KEY   = `remoteName:${ROOM}`;
+
+const avatarImg = document.getElementById("avatarImg");
+const roleTitle = document.getElementById("roleTitle");
+
+function setLocalAvatar(nome,foto){
+  sessionStorage.setItem(AVATAR_KEY,foto);
+  sessionStorage.setItem(NAME_KEY,nome);
+
+  avatarImg.src = foto;
+  roleTitle.textContent = nome;
+}
+
+function setRemoteAvatar(nome,foto){
+  sessionStorage.setItem(REMOTE_AVATAR_KEY,foto);
+  sessionStorage.setItem(REMOTE_NAME_KEY,nome);
+
+  avatarImg.src = foto;
+  roleTitle.textContent = nome;
+}
+
+function abrirListaConsultores(){
+
+  let nomes = CONSULTORAS.map((c,i)=>`${i+1} - ${c[0]}`).join("\n");
+
+  let escolha = prompt("Escolha o atendente:\n\n"+nomes);
+
+  if(!escolha) return;
+
+  escolha = parseInt(escolha)-1;
+
+  if(escolha < 0 || escolha >= CONSULTORAS.length) return;
+
+  const nome = CONSULTORAS[escolha][0];
+  const foto = CONSULTORAS[escolha][1];
+
+  setLocalAvatar(nome,foto);
+
+  socket.emit("chat_image",{
+    dataUrl:foto,
+    alt:"__avatar__|"+nome
+  });
+}
+
 function initAvatar(){
+
   avatarImg.src = DEFAULT_AVATAR;
-  if (ROLE === 'atendente'){
-    const saved = sessionStorage.getItem(AVATAR_KEY);
-    if (saved) avatarImg.src = saved;
-    avatarImg.addEventListener('click', ()=> avatarPicker.click());
-    avatarPicker.addEventListener('change', async (e)=>{
-      const f = e.target.files && e.target.files[0];
-      if (!f) return;
-      if (!f.type.startsWith('image/')) return;
-      const reader = new FileReader();
-      reader.onload = async ()=>{
-        const dataUrl = await downscaleDataUrl(reader.result, 256, 0.85); // WebP leve para avatar
-        setLocalAvatar(dataUrl);
-        if (isPaired) { try { socket.emit("chat_image", { dataUrl, alt: "__avatar__" }); } catch(_){} }
-        avatarPicker.value = '';
-      };
-      reader.readAsDataURL(f);
-    });
-  } else {
-    const remote = sessionStorage.getItem(REMOTE_AVATAR_KEY);
-    if (remote) avatarImg.src = remote;
+
+  if(ROLE === "atendente"){
+
+    const nome = sessionStorage.getItem(NAME_KEY) || CONSULTORAS[0][0];
+    const foto = sessionStorage.getItem(AVATAR_KEY) || CONSULTORAS[0][1];
+
+    setLocalAvatar(nome,foto);
+
+    avatarImg.onclick = abrirListaConsultores;
+
+  }else{
+
+    const nome = sessionStorage.getItem(REMOTE_NAME_KEY) || "Atendimento";
+    const foto = sessionStorage.getItem(REMOTE_AVATAR_KEY) || DEFAULT_AVATAR;
+
+    setRemoteAvatar(nome,foto);
   }
 }
 
@@ -792,7 +849,12 @@ socket.on("message_seen", ({ id }) => markSeen(id));
 socket.on("chat_image", ({ from, dataUrl, alt, id, reply }) => {
   if (shouldIgnoreInbound()) return;
 
-  if (alt === "__avatar__"){ setRemoteAvatar(dataUrl); return; }
+ if(typeof alt === "string" && alt.startsWith("__avatar__|")){
+
+   const nome = alt.replace("__avatar__|","");
+   setRemoteAvatar(nome,dataUrl);
+   return;
+}
 
   if (typeof alt === 'string' && alt.startsWith("__reaction__|")){
     const [, msgId, emoji, uid] = alt.split("|");

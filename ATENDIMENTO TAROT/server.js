@@ -1,5 +1,5 @@
 // server.js - COMPLETO CORRIGIDO PARA RENDER
-// Chat + Reconexão UID + Exclusão + Rotas funcionando
+// Chat + Reconexão UID + Exclusão + Rotas SPA + Anti 404
 
 const path = require("path");
 const express = require("express");
@@ -10,13 +10,18 @@ const nodemailer = require("nodemailer");
 const app = express();
 const server = http.createServer(app);
 
-// ================= SOCKET =================
+// =====================================================
+// SOCKET.IO
+// =====================================================
 const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
+  transports: ["websocket", "polling"],
   maxHttpBufferSize: 5e7
 });
 
-// ================= EMAIL =================
+// =====================================================
+// EMAIL
+// =====================================================
 const ALERT_TO = "marciodoxosse@gmail.com";
 const ALERT_FROM = "Cartomantes Online <cartomantesonline2023@gmail.com>";
 
@@ -44,30 +49,44 @@ async function sendEmail({ subject, text, html }) {
   }
 }
 
-// ================= STATIC =================
+// =====================================================
+// STATIC / ROTAS RENDER
+// =====================================================
 
-// arquivos públicos
-app.use(express.static(__dirname));
+// arquivos estáticos
+app.use(express.static(__dirname, {
+  extensions: ["html"]
+}));
 
-// ROOT -> index.html
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
-
-// encerrado.html
+// rota encerrado
 app.get("/encerrado.html", (req, res) => {
   res.sendFile(path.join(__dirname, "encerrado.html"));
 });
 
-// ================= ESTADO =================
+// raiz
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+// qualquer rota cai no index.html
+// evita erro 404 no Render
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+// =====================================================
+// ESTADO DAS SALAS
+// =====================================================
 const rooms = new Map();
 
 function getState(room) {
   if (!rooms.has(room)) {
     rooms.set(room, {
       queue: [],
+
       attendantId: null,
       attendantUid: null,
+
       clientId: null,
       clientUid: null,
 
@@ -92,12 +111,17 @@ function getState(room) {
 
 function updateQueueSize(room) {
   const st = getState(room);
-  io.to(room).emit("queue_size", { size: st.queue.length });
+  io.to(room).emit("queue_size", {
+    size: st.queue.length
+  });
 }
 
 function cleanQueue(room) {
   const st = getState(room);
-  st.queue = st.queue.filter(id => io.sockets.sockets.has(id));
+
+  st.queue = st.queue.filter(id =>
+    io.sockets.sockets.has(id)
+  );
 }
 
 function sendTimerState(room) {
@@ -109,7 +133,9 @@ function sendTimerState(room) {
   });
 }
 
-// ================= PAREAR =================
+// =====================================================
+// PAREAMENTO
+// =====================================================
 function pair(attendantSocket, clientSocket) {
   const room = attendantSocket.data.room;
   const st = getState(room);
@@ -155,6 +181,7 @@ function unpair(room, reason = "ended") {
 
   st.attendantId = null;
   st.clientId = null;
+
   st.attendantUid = null;
   st.clientUid = null;
 
@@ -164,19 +191,27 @@ function unpair(room, reason = "ended") {
     startedAt: null
   };
 
-  if (st.grace.attTimeout) clearTimeout(st.grace.attTimeout);
-  if (st.grace.cliTimeout) clearTimeout(st.grace.cliTimeout);
+  if (st.grace.attTimeout)
+    clearTimeout(st.grace.attTimeout);
+
+  if (st.grace.cliTimeout)
+    clearTimeout(st.grace.cliTimeout);
 
   st.grace.attTimeout = null;
   st.grace.cliTimeout = null;
 
-  if (aId) io.to(aId).emit("conversation_ended", { reason });
-  if (cId) io.to(cId).emit("conversation_ended", { reason });
+  if (aId)
+    io.to(aId).emit("conversation_ended", { reason });
+
+  if (cId)
+    io.to(cId).emit("conversation_ended", { reason });
 
   updateQueueSize(room);
 }
 
-// ================= TIMER =================
+// =====================================================
+// TIMER
+// =====================================================
 function startTimer(room) {
   const st = getState(room);
 
@@ -204,14 +239,18 @@ function stopTimer(room) {
   sendTimerState(room);
 }
 
-// ================= SOCKET =================
+// =====================================================
+// SOCKET
+// =====================================================
 io.on("connection", socket => {
 
   socket.data.role = "cliente";
   socket.data.room = "main";
   socket.data.uid = null;
 
-  // ================= REGISTER =================
+  // ==========================================
+  // REGISTER
+  // ==========================================
   socket.on("register", ({ role, room, uid }) => {
 
     socket.data.role =
@@ -226,10 +265,10 @@ io.on("connection", socket => {
 
     const st = getState(socket.data.room);
 
-    // ===== reconectar atendente
+    // reconectar atendente
     if (
       socket.data.role === "atendente" &&
-      st.attendantUid &&
+      uid &&
       uid === st.attendantUid
     ) {
       st.attendantId = socket.id;
@@ -240,17 +279,15 @@ io.on("connection", socket => {
       st.grace.attTimeout = null;
 
       socket.emit("paired");
-
       sendTimerState(socket.data.room);
       updateQueueSize(socket.data.room);
-
       return;
     }
 
-    // ===== reconectar cliente
+    // reconectar cliente
     if (
       socket.data.role === "cliente" &&
-      st.clientUid &&
+      uid &&
       uid === st.clientUid
     ) {
       st.clientId = socket.id;
@@ -261,30 +298,27 @@ io.on("connection", socket => {
       st.grace.cliTimeout = null;
 
       socket.emit("paired");
-
       sendTimerState(socket.data.room);
       updateQueueSize(socket.data.room);
-
       return;
     }
 
-    // ===== NOVO CLIENTE
+    // novo cliente
     if (socket.data.role === "cliente") {
 
       if (!st.queue.includes(socket.id))
         st.queue.push(socket.id);
 
       io.to(socket.data.room).emit("queue_join");
-
       updateQueueSize(socket.data.room);
 
       const now = Date.now();
       const key = uid || socket.id;
-      const TTL = 15 * 60 * 1000;
+      const ttl = 15 * 60 * 1000;
 
       const last = st.notifiedUIDs.get(key);
 
-      if (!last || now - last > TTL) {
+      if (!last || now - last > ttl) {
         st.notifiedUIDs.set(key, now);
 
         sendEmail({
@@ -299,7 +333,9 @@ io.on("connection", socket => {
 
   });
 
-  // ================= FILA =================
+  // ==========================================
+  // FILA
+  // ==========================================
   socket.on("next_in_queue", () => {
     if (socket.data.role !== "atendente") return;
     pairNext(socket);
@@ -308,7 +344,9 @@ io.on("connection", socket => {
   socket.on("leave_queue", () => {
     const st = getState(socket.data.room);
 
-    st.queue = st.queue.filter(id => id !== socket.id);
+    st.queue = st.queue.filter(id =>
+      id !== socket.id
+    );
 
     updateQueueSize(socket.data.room);
   });
@@ -317,68 +355,79 @@ io.on("connection", socket => {
     updateQueueSize(socket.data.room);
   });
 
-  // ================= CHAT =================
-  socket.on("chat_message", ({ text, id, reply }) => {
-
+  // ==========================================
+  // CHAT
+  // ==========================================
+  function getTargetId() {
     const st = getState(socket.data.room);
 
-    const from =
-      socket.data.role === "atendente"
-        ? "attendant"
-        : "client";
+    if (socket.data.role === "atendente")
+      return st.clientId;
 
-    const toId =
-      from === "attendant"
-        ? st.clientId
-        : st.attendantId;
+    return st.attendantId;
+  }
 
-    if (toId)
-      io.to(toId).emit("chat_message", {
-        from,
-        text,
-        id,
-        reply
-      });
+  function getFrom() {
+    return socket.data.role === "atendente"
+      ? "attendant"
+      : "client";
+  }
+
+  socket.on("chat_message", data => {
+    const toId = getTargetId();
+    if (!toId) return;
+
+    io.to(toId).emit("chat_message", {
+      from: getFrom(),
+      ...data
+    });
   });
 
   socket.on("chat_image", data => {
-    const st = getState(socket.data.room);
+    const toId = getTargetId();
+    if (!toId) return;
 
-    const from =
-      socket.data.role === "atendente"
-        ? "attendant"
-        : "client";
-
-    const toId =
-      from === "attendant"
-        ? st.clientId
-        : st.attendantId;
-
-    if (toId)
-      io.to(toId).emit("chat_image", {
-        from,
-        ...data
-      });
+    io.to(toId).emit("chat_image", {
+      from: getFrom(),
+      ...data
+    });
   });
 
   socket.on("chat_audio", data => {
-    const st = getState(socket.data.room);
+    const toId = getTargetId();
+    if (!toId) return;
 
-    const from =
-      socket.data.role === "atendente"
-        ? "attendant"
-        : "client";
+    io.to(toId).emit("chat_audio", {
+      from: getFrom(),
+      ...data
+    });
+  });
 
-    const toId =
-      from === "attendant"
-        ? st.clientId
-        : st.attendantId;
+  socket.on("typing", ({ isTyping }) => {
+    const toId = getTargetId();
+    if (!toId) return;
 
-    if (toId)
-      io.to(toId).emit("chat_audio", {
-        from,
-        ...data
-      });
+    io.to(toId).emit("typing", {
+      from: getFrom(),
+      isTyping: !!isTyping
+    });
+  });
+
+  socket.on("recording", ({ isRecording }) => {
+    const toId = getTargetId();
+    if (!toId) return;
+
+    io.to(toId).emit("recording", {
+      from: getFrom(),
+      isRecording: !!isRecording
+    });
+  });
+
+  socket.on("message_seen", ({ id }) => {
+    const toId = getTargetId();
+    if (!toId) return;
+
+    io.to(toId).emit("message_seen", { id });
   });
 
   socket.on("delete_message", ({ id }) => {
@@ -391,59 +440,9 @@ io.on("connection", socket => {
       io.to(st.clientId).emit("delete_message", { id });
   });
 
-  socket.on("typing", ({ isTyping }) => {
-    const st = getState(socket.data.room);
-
-    const from =
-      socket.data.role === "atendente"
-        ? "attendant"
-        : "client";
-
-    const toId =
-      from === "attendant"
-        ? st.clientId
-        : st.attendantId;
-
-    if (toId)
-      io.to(toId).emit("typing", {
-        from,
-        isTyping
-      });
-  });
-
-  socket.on("recording", ({ isRecording }) => {
-    const st = getState(socket.data.room);
-
-    const from =
-      socket.data.role === "atendente"
-        ? "attendant"
-        : "client";
-
-    const toId =
-      from === "attendant"
-        ? st.clientId
-        : st.attendantId;
-
-    if (toId)
-      io.to(toId).emit("recording", {
-        from,
-        isRecording
-      });
-  });
-
-  socket.on("message_seen", ({ id }) => {
-    const st = getState(socket.data.room);
-
-    const toId =
-      socket.id === st.attendantId
-        ? st.clientId
-        : st.attendantId;
-
-    if (toId)
-      io.to(toId).emit("message_seen", { id });
-  });
-
-  // ================= TIMER =================
+  // ==========================================
+  // TIMER
+  // ==========================================
   socket.on("timer_start", () => {
     startTimer(socket.data.room);
   });
@@ -452,34 +451,50 @@ io.on("connection", socket => {
     stopTimer(socket.data.room);
   });
 
-  // ================= ENCERRAR =================
+  // ==========================================
+  // ENCERRAR
+  // ==========================================
   socket.on("end_conversation", () => {
     unpair(socket.data.room, "ended");
   });
 
-  // ================= DISCONNECT =================
+  // ==========================================
+  // DISCONNECT
+  // ==========================================
   socket.on("disconnect", () => {
 
     const st = getState(socket.data.room);
 
-    st.queue = st.queue.filter(id => id !== socket.id);
+    st.queue = st.queue.filter(id =>
+      id !== socket.id
+    );
 
     updateQueueSize(socket.data.room);
 
+    // atendente caiu
     if (socket.id === st.attendantId) {
 
       st.grace.attTimeout = setTimeout(() => {
-        if (!io.sockets.sockets.has(st.attendantId))
+        if (
+          !st.attendantId ||
+          !io.sockets.sockets.has(st.attendantId)
+        ) {
           unpair(socket.data.room, "attendant_left");
+        }
       }, st.grace.ms);
 
     }
 
+    // cliente caiu
     if (socket.id === st.clientId) {
 
       st.grace.cliTimeout = setTimeout(() => {
-        if (!io.sockets.sockets.has(st.clientId))
+        if (
+          !st.clientId ||
+          !io.sockets.sockets.has(st.clientId)
+        ) {
           unpair(socket.data.room, "client_left");
+        }
       }, st.grace.ms);
 
     }
@@ -488,7 +503,9 @@ io.on("connection", socket => {
 
 });
 
-// ================= START =================
+// =====================================================
+// START
+// =====================================================
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {

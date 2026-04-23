@@ -923,7 +923,8 @@ socket.on("conversation_ended", ({ reason }) => {
   try { socket.emit("queue_sync", { room: ROOM }); } catch(_){ }
   setRecBadge(false);
   if (ROLE === "cliente") {
-    const END_URL = "https://atendimento2.onrender.com/encerrado.html?v=" + Date.now();
+ const END_URL =
+"https://atendimento2-8kie.onrender.com/encerrado.html?v=" + Date.now();
     const box=document.createElement('div'); box.style.cssText="text-align:center;padding:12px;"; box.innerHTML=`🔁 Redirecionando para a avaliação…<br><a href="${END_URL}" style="font-weight:700;" target="_top" rel="noopener">Ir agora</a>`;
     document.body.appendChild(box);
     setTimeout(()=>{ try{ window.location.replace(END_URL);}catch(_){ window.location.href=END_URL; } }, 800);

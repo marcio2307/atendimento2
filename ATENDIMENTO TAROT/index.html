@@ -621,11 +621,10 @@ function abrirListaConsultores(){
       setLocalAvatar(nome,foto);
 
       /* envia em tempo real pro cliente */
-      socket.emit("chat_image",{
-        dataUrl: foto,
-        alt: "__avatar__|" + nome
-      });
-
+      socket.emit("avatar_update",{
+ nome:nome,
+ foto:foto
+});
       modal.style.display = "none";
     };
 
@@ -749,63 +748,175 @@ function loadTimerLocal(){ try{ return JSON.parse(localStorage.getItem(TIMER_KEY
 function applyTimerLocalOnLoad(){ const st = loadTimerLocal(); if (Number.isFinite(st.pausedSec)){ segundos = Math.max(0, st.pausedSec|0); updateTimer(); } else { segundos = 0; updateTimer(); } }
 
 /* ===== SOCKET ===== */
-const socket = io({ transports: ["websocket", "polling"] });
+const socket = io({
+  transports: ["websocket", "polling"]
+});
 
 socket.on("connect", () => {
-  socket.emit("register", { role: ROLE, room: ROOM, name: ROLE === "cliente" ? "Cliente" : "Atendente", uid: UID });
 
+  /* registra usuário */
+  socket.emit("register", {
+    role: ROLE,
+    room: ROOM,
+    name: ROLE === "cliente" ? "Cliente" : "Atendente",
+    uid: UID
+  });
+
+  /* inicia avatar */
   initAvatar();
 
-  if (ROLE === "cliente") { centerRow.style.display = "flex"; setChatEnabled(false); }
-  if (!restored) restoreHistory();
+  /* cliente entra aguardando */
+  if (ROLE === "cliente") {
+    centerRow.style.display = "flex";
+    setChatEnabled(false);
+  }
 
+  /* histórico */
+  if (!restored) {
+    restoreHistory();
+  }
+
+  /* timer salvo */
   applyTimerLocalOnLoad();
 
   requestAnimationFrame(scrollDown);
   updateActionBtnState();
 });
 
-socket.on("queue_size", ({ size }) => { const chip = document.getElementById("chipEspera"); if (chip) chip.textContent = String(size); });
-socket.on("queue_join", () => { if (ROLE === "atendente") playSound("sndQueue"); });
+/* cliente recebe troca de consultor em tempo real */
+socket.on("avatar_update", ({ nome, foto }) => {
+  if (ROLE === "cliente") {
+    setRemoteAvatar(nome, foto);
+  }
+});
 
+/* fila */
+socket.on("queue_size", ({ size }) => {
+  const chip = document.getElementById("chipEspera");
+  if (chip) chip.textContent = String(size);
+});
+
+socket.on("queue_join", () => {
+  if (ROLE === "atendente") playSound("sndQueue");
+});
+
+/* pareado */
 socket.on("paired", () => {
+
   isPaired = true;
-  avatarImg.classList.add('online');
-  timerEl.classList.toggle('running', !!cronometro);
+
+  avatarImg.classList.add("online");
+  timerEl.classList.toggle("running", !!cronometro);
+
   centerRow.style.display = "none";
   setChatEnabled(true);
+
   if (ROLE === "cliente" && history.length === 0) {
     addMessage("Conectado ao atendente.", "client", genUID(), true);
-    history.push({ t:"text", sender:"client", text:"Conectado ao atendente.", id: genUID(), seen: true }); saveHistory();
+
+    history.push({
+      t: "text",
+      sender: "client",
+      text: "Conectado ao atendente.",
+      id: genUID(),
+      seen: true
+    });
+
+    saveHistory();
   }
-  if (ROLE === 'atendente'){
-    const av = sessionStorage.getItem(AVATAR_KEY);
-    if (av) { try { socket.emit("chat_image", { dataUrl: av, alt: "__avatar__" }); } catch(_){} }
+
+  /* envia avatar escolhido do atendente */
+  if (ROLE === "atendente") {
+
+    const nome = sessionStorage.getItem(NAME_KEY);
+    const foto = sessionStorage.getItem(AVATAR_KEY);
+
+    if (nome && foto) {
+      try {
+        socket.emit("avatar_update", {
+          nome: nome,
+          foto: foto
+        });
+      } catch (_) {}
+    }
+
   }
-  scrollDown(); updateActionBtnState();
+
+  scrollDown();
+  updateActionBtnState();
 });
 
 /* ===== Exclusão ===== */
-function addDeleteButton(container, id){
+function addDeleteButton(container, id) {
+
   if (!id) return;
-  const btn = document.createElement('button');
-  btn.className = 'del-btn'; btn.title = 'Apagar mensagem'; btn.textContent = '🗑️';
-  btn.style.cssText = 'margin-left:6px;background:transparent;border:none;cursor:pointer;opacity:.7;';
-  btn.addEventListener('click', ()=>{ removeMessageDom(id); removeFromHistory(id); try{ socket.emit("delete_message", { id }); }catch(_){ } });
+
+  const btn = document.createElement("button");
+
+  btn.className = "del-btn";
+  btn.title = "Apagar mensagem";
+  btn.textContent = "🗑️";
+
+  btn.style.cssText =
+    "margin-left:6px;background:transparent;border:none;cursor:pointer;opacity:.7;";
+
+  btn.addEventListener("click", () => {
+
+    removeMessageDom(id);
+    removeFromHistory(id);
+
+    try {
+      socket.emit("delete_message", { id });
+    } catch (_) {}
+
+  });
+
   return btn;
 }
-function removeMessageDom(id){ const el = chatBody.querySelector(`.message[data-id="${id}"]`); if (el) el.remove(); }
-function removeFromHistory(id){ const idx = history.findIndex(h => h.id === id); if (idx >= 0){ history.splice(idx,1); saveHistory(); } }
+
+function removeMessageDom(id) {
+  const el = chatBody.querySelector(`.message[data-id="${id}"]`);
+  if (el) el.remove();
+}
+
+function removeFromHistory(id) {
+
+  const idx = history.findIndex(h => h.id === id);
+
+  if (idx >= 0) {
+    history.splice(idx, 1);
+    saveHistory();
+  }
+
+}
 
 /* ===== REAÇÕES ===== */
 const REACT_KEY = `reactions:${ROOM}`;
+
 let reactionsMap = {};
-function loadReactions(){ try { reactionsMap = JSON.parse(sessionStorage.getItem(REACT_KEY) || "{}"); } catch { reactionsMap = {}; } }
-function saveReactions(){ try { sessionStorage.setItem(REACT_KEY, JSON.stringify(reactionsMap)); } catch {} }
+
+function loadReactions() {
+  try {
+    reactionsMap = JSON.parse(
+      sessionStorage.getItem(REACT_KEY) || "{}"
+    );
+  } catch {
+    reactionsMap = {};
+  }
+}
+
+function saveReactions() {
+  try {
+    sessionStorage.setItem(
+      REACT_KEY,
+      JSON.stringify(reactionsMap)
+    );
+  } catch {}
+}
+
 loadReactions();
 
 const EMOJIS = ["👍","❤️","😂","😮","😢","🙏"];
-
 function toggleReactionLocal(msgId, emoji, uid){
   if (!reactionsMap[msgId]) reactionsMap[msgId] = {};
   if (!reactionsMap[msgId][emoji]) reactionsMap[msgId][emoji] = [];

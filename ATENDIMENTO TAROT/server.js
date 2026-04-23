@@ -1,5 +1,5 @@
 // server.js - COMPLETO CORRIGIDO PARA RENDER
-// Chat + Reconexão UID + Exclusão + Rotas SPA + Anti 404
+// Chat + Reconexão UID + Exclusão + Avatar em tempo real + Rotas SPA + Anti 404
 
 const path = require("path");
 const express = require("express");
@@ -50,32 +50,26 @@ async function sendEmail({ subject, text, html }) {
 }
 
 // =====================================================
-// STATIC / ROTAS RENDER
+// STATIC
 // =====================================================
-
-// arquivos estáticos
 app.use(express.static(__dirname, {
   extensions: ["html"]
 }));
 
-// rota encerrado
 app.get("/encerrado.html", (req, res) => {
   res.sendFile(path.join(__dirname, "encerrado.html"));
 });
 
-// raiz
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// qualquer rota cai no index.html
-// evita erro 404 no Render
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
 // =====================================================
-// ESTADO DAS SALAS
+// SALAS
 // =====================================================
 const rooms = new Map();
 
@@ -89,6 +83,8 @@ function getState(room) {
 
       clientId: null,
       clientUid: null,
+
+      attendantAvatar: null,
 
       timer: {
         running: false,
@@ -111,6 +107,7 @@ function getState(room) {
 
 function updateQueueSize(room) {
   const st = getState(room);
+
   io.to(room).emit("queue_size", {
     size: st.queue.length
   });
@@ -134,9 +131,10 @@ function sendTimerState(room) {
 }
 
 // =====================================================
-// PAREAMENTO
+// PAREAR
 // =====================================================
 function pair(attendantSocket, clientSocket) {
+
   const room = attendantSocket.data.room;
   const st = getState(room);
 
@@ -149,11 +147,20 @@ function pair(attendantSocket, clientSocket) {
   attendantSocket.emit("paired");
   clientSocket.emit("paired");
 
+  // envia avatar salvo ao cliente
+  if (st.attendantAvatar) {
+    io.to(st.clientId).emit(
+      "avatar_update",
+      st.attendantAvatar
+    );
+  }
+
   sendTimerState(room);
   updateQueueSize(room);
 }
 
 function pairNext(attendantSocket) {
+
   const room = attendantSocket.data.room;
   const st = getState(room);
 
@@ -161,8 +168,8 @@ function pairNext(attendantSocket) {
 
   if (!st.queue.length) return false;
 
-  const nextClientId = st.queue.shift();
-  const cli = io.sockets.sockets.get(nextClientId);
+  const nextId = st.queue.shift();
+  const cli = io.sockets.sockets.get(nextId);
 
   if (!cli) {
     updateQueueSize(room);
@@ -174,6 +181,7 @@ function pairNext(attendantSocket) {
 }
 
 function unpair(room, reason = "ended") {
+
   const st = getState(room);
 
   const aId = st.attendantId;
@@ -213,6 +221,7 @@ function unpair(room, reason = "ended") {
 // TIMER
 // =====================================================
 function startTimer(room) {
+
   const st = getState(room);
 
   if (st.timer.running) return;
@@ -224,6 +233,7 @@ function startTimer(room) {
 }
 
 function stopTimer(room) {
+
   const st = getState(room);
 
   if (!st.timer.running) return;
@@ -248,9 +258,9 @@ io.on("connection", socket => {
   socket.data.room = "main";
   socket.data.uid = null;
 
-  // ==========================================
+  // =================================================
   // REGISTER
-  // ==========================================
+  // =================================================
   socket.on("register", ({ role, room, uid }) => {
 
     socket.data.role =
@@ -265,7 +275,7 @@ io.on("connection", socket => {
 
     const st = getState(socket.data.room);
 
-    // reconectar atendente
+    // reconexão atendente
     if (
       socket.data.role === "atendente" &&
       uid &&
@@ -284,7 +294,7 @@ io.on("connection", socket => {
       return;
     }
 
-    // reconectar cliente
+    // reconexão cliente
     if (
       socket.data.role === "cliente" &&
       uid &&
@@ -298,6 +308,14 @@ io.on("connection", socket => {
       st.grace.cliTimeout = null;
 
       socket.emit("paired");
+
+      if (st.attendantAvatar) {
+        socket.emit(
+          "avatar_update",
+          st.attendantAvatar
+        );
+      }
+
       sendTimerState(socket.data.room);
       updateQueueSize(socket.data.room);
       return;
@@ -310,6 +328,7 @@ io.on("connection", socket => {
         st.queue.push(socket.id);
 
       io.to(socket.data.room).emit("queue_join");
+
       updateQueueSize(socket.data.room);
 
       const now = Date.now();
@@ -319,6 +338,7 @@ io.on("connection", socket => {
       const last = st.notifiedUIDs.get(key);
 
       if (!last || now - last > ttl) {
+
         st.notifiedUIDs.set(key, now);
 
         sendEmail({
@@ -333,19 +353,37 @@ io.on("connection", socket => {
 
   });
 
-  // ==========================================
+  // =================================================
+  // AVATAR EM TEMPO REAL
+  // =================================================
+  socket.on("avatar_update", data => {
+
+    const st = getState(socket.data.room);
+
+    st.attendantAvatar = data;
+
+    if (st.clientId) {
+      io.to(st.clientId).emit(
+        "avatar_update",
+        data
+      );
+    }
+  });
+
+  // =================================================
   // FILA
-  // ==========================================
+  // =================================================
   socket.on("next_in_queue", () => {
     if (socket.data.role !== "atendente") return;
     pairNext(socket);
   });
 
   socket.on("leave_queue", () => {
+
     const st = getState(socket.data.room);
 
-    st.queue = st.queue.filter(id =>
-      id !== socket.id
+    st.queue = st.queue.filter(
+      id => id !== socket.id
     );
 
     updateQueueSize(socket.data.room);
@@ -355,10 +393,11 @@ io.on("connection", socket => {
     updateQueueSize(socket.data.room);
   });
 
-  // ==========================================
+  // =================================================
   // CHAT
-  // ==========================================
+  // =================================================
   function getTargetId() {
+
     const st = getState(socket.data.room);
 
     if (socket.data.role === "atendente")
@@ -413,16 +452,6 @@ io.on("connection", socket => {
     });
   });
 
-  socket.on("recording", ({ isRecording }) => {
-    const toId = getTargetId();
-    if (!toId) return;
-
-    io.to(toId).emit("recording", {
-      from: getFrom(),
-      isRecording: !!isRecording
-    });
-  });
-
   socket.on("message_seen", ({ id }) => {
     const toId = getTargetId();
     if (!toId) return;
@@ -431,18 +460,25 @@ io.on("connection", socket => {
   });
 
   socket.on("delete_message", ({ id }) => {
+
     const st = getState(socket.data.room);
 
     if (st.attendantId)
-      io.to(st.attendantId).emit("delete_message", { id });
+      io.to(st.attendantId).emit(
+        "delete_message",
+        { id }
+      );
 
     if (st.clientId)
-      io.to(st.clientId).emit("delete_message", { id });
+      io.to(st.clientId).emit(
+        "delete_message",
+        { id }
+      );
   });
 
-  // ==========================================
+  // =================================================
   // TIMER
-  // ==========================================
+  // =================================================
   socket.on("timer_start", () => {
     startTimer(socket.data.room);
   });
@@ -451,52 +487,58 @@ io.on("connection", socket => {
     stopTimer(socket.data.room);
   });
 
-  // ==========================================
+  // =================================================
   // ENCERRAR
-  // ==========================================
+  // =================================================
   socket.on("end_conversation", () => {
     unpair(socket.data.room, "ended");
   });
 
-  // ==========================================
+  // =================================================
   // DISCONNECT
-  // ==========================================
+  // =================================================
   socket.on("disconnect", () => {
 
     const st = getState(socket.data.room);
 
-    st.queue = st.queue.filter(id =>
-      id !== socket.id
+    st.queue = st.queue.filter(
+      id => id !== socket.id
     );
 
     updateQueueSize(socket.data.room);
 
-    // atendente caiu
     if (socket.id === st.attendantId) {
 
       st.grace.attTimeout = setTimeout(() => {
+
         if (
           !st.attendantId ||
           !io.sockets.sockets.has(st.attendantId)
         ) {
-          unpair(socket.data.room, "attendant_left");
+          unpair(
+            socket.data.room,
+            "attendant_left"
+          );
         }
-      }, st.grace.ms);
 
+      }, st.grace.ms);
     }
 
-    // cliente caiu
     if (socket.id === st.clientId) {
 
       st.grace.cliTimeout = setTimeout(() => {
+
         if (
           !st.clientId ||
           !io.sockets.sockets.has(st.clientId)
         ) {
-          unpair(socket.data.room, "client_left");
+          unpair(
+            socket.data.room,
+            "client_left"
+          );
         }
-      }, st.grace.ms);
 
+      }, st.grace.ms);
     }
 
   });

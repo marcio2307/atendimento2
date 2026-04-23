@@ -1056,8 +1056,29 @@ socket.on("connect", () => {
 
 /* cliente recebe troca de consultor em tempo real */
 socket.on("avatar_update", ({ nome, foto }) => {
+
   if (ROLE === "cliente") {
-    setRemoteAvatar(nome, foto);
+
+    /* salva no cliente */
+    sessionStorage.setItem(REMOTE_AVATAR_KEY, foto);
+    sessionStorage.setItem(REMOTE_NAME_KEY, nome);
+
+    /* força carregar imagem nova */
+    avatarImg.src = foto + "?v=" + Date.now();
+
+    /* mostra foto */
+    avatarImg.style.display = "block";
+    avatarImg.style.visibility = "visible";
+    avatarImg.style.opacity = "1";
+
+    avatarImg.classList.add("show");
+    avatarImg.classList.add("online");
+
+    /* cliente não vê nome */
+    if (roleTitle) roleTitle.textContent = "";
+
+    /* repaint */
+    avatarImg.offsetHeight;
   }
 });
 
@@ -1076,14 +1097,39 @@ socket.on("paired", () => {
 
   isPaired = true;
 
-  avatarImg.classList.add("online");
-  timerEl.classList.toggle("running", !!cronometro);
-
   centerRow.style.display = "none";
   setChatEnabled(true);
 
+  timerEl.classList.toggle("running", !!cronometro);
+
+  /* cliente: se já existe avatar salvo, mostra */
+  if (ROLE === "cliente") {
+
+    const nome = sessionStorage.getItem(REMOTE_NAME_KEY);
+    const foto = sessionStorage.getItem(REMOTE_AVATAR_KEY);
+
+    if (nome && foto) {
+      avatarImg.src = foto + "?v=" + Date.now();
+      avatarImg.style.display = "block";
+      avatarImg.style.visibility = "visible";
+      avatarImg.style.opacity = "1";
+
+      avatarImg.classList.add("show");
+      avatarImg.classList.add("online");
+    }
+
+  } else {
+    avatarImg.classList.add("online");
+  }
+
   if (ROLE === "cliente" && history.length === 0) {
-    addMessage("Conectado ao atendente.", "client", genUID(), true);
+
+    addMessage(
+      "Conectado ao atendente.",
+      "client",
+      genUID(),
+      true
+    );
 
     history.push({
       t: "text",
@@ -1096,7 +1142,7 @@ socket.on("paired", () => {
     saveHistory();
   }
 
-  /* envia avatar escolhido do atendente */
+  /* atendente envia avatar escolhido */
   if (ROLE === "atendente") {
 
     const nome = sessionStorage.getItem(NAME_KEY);
@@ -1110,7 +1156,6 @@ socket.on("paired", () => {
         });
       } catch (_) {}
     }
-
   }
 
   scrollDown();

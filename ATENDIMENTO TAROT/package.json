@@ -1,14 +1,17 @@
 {
   "name": "chat-tarot-realtime",
-  "version": "1.0.0",
+  "version": "1.0.1",
+  "description": "Chat Tarot em tempo real para Render",
   "private": true,
   "main": "server.js",
   "type": "commonjs",
+  "license": "MIT",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node server.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=18.x"
   },
   "dependencies": {
     "express": "^4.19.2",

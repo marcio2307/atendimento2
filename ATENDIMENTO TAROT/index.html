@@ -930,8 +930,10 @@ function abrirListaConsultores(){
 ===================================================== */
 function initAvatar(){
 
-  /* ATENDENTE */
-  if(ROLE === "atendente"){
+  /* =========================
+     ATENDENTE
+  ========================= */
+  if (ROLE === "atendente"){
 
     const nome = sessionStorage.getItem(NAME_KEY);
     const foto = sessionStorage.getItem(AVATAR_KEY);
@@ -941,22 +943,25 @@ function initAvatar(){
     }else{
       avatarImg.src = DEFAULT_AVATAR;
       avatarImg.style.display = "block";
+      avatarImg.classList.add("show");
     }
 
     avatarImg.onclick = abrirListaConsultores;
+    return;
   }
 
-  /* CLIENTE */
-  else{
+  /* =========================
+     CLIENTE
+  ========================= */
+  avatarImg.style.display = "none";
+  avatarImg.classList.remove("show");
 
-    avatarImg.style.display = "none"; // começa vazio
+  const nome = sessionStorage.getItem(REMOTE_NAME_KEY);
+  const foto = sessionStorage.getItem(REMOTE_AVATAR_KEY);
 
-    const nome = sessionStorage.getItem(REMOTE_NAME_KEY);
-    const foto = sessionStorage.getItem(REMOTE_AVATAR_KEY);
-
-    if(isPaired && nome && foto){
-      setRemoteAvatar(nome,foto);
-    }
+  /* se já existir foto salva, mostra */
+  if(nome && foto){
+    setRemoteAvatar(nome,foto);
   }
 }
 /* ===== HISTÓRICO LOCAL ===== */
@@ -1744,17 +1749,30 @@ socket.on("conversation_ended", ({ reason }) => {
     localStorage.removeItem(TIMER_KEY);
   }catch(_){}
 
-  /* limpa foto do consultor ao encerrar */
-  avatarImg.src = "";
-  avatarImg.style.display = "none";
-  avatarImg.classList.remove("show");
+  /* CLIENTE limpa avatar */
+  if(ROLE === "cliente"){
 
-  try{
-    sessionStorage.removeItem(REMOTE_AVATAR_KEY);
-    sessionStorage.removeItem(REMOTE_NAME_KEY);
-  }catch(_){}
+    avatarImg.src = "";
+    avatarImg.style.display = "none";
+    avatarImg.classList.remove("show");
 
-  if(roleTitle){
+    try{
+      sessionStorage.removeItem(REMOTE_AVATAR_KEY);
+      sessionStorage.removeItem(REMOTE_NAME_KEY);
+    }catch(_){}
+  }
+
+  /* ATENDENTE mantém foto */
+  if(ROLE === "atendente"){
+    const nome = sessionStorage.getItem(NAME_KEY);
+    const foto = sessionStorage.getItem(AVATAR_KEY);
+
+    if(nome && foto){
+      setLocalAvatar(nome,foto);
+    }
+  }
+
+  if(roleTitle && ROLE === "cliente"){
     roleTitle.textContent = "";
   }
 
@@ -1775,23 +1793,18 @@ socket.on("conversation_ended", ({ reason }) => {
 
     const box = document.createElement("div");
 
-    box.style.cssText =
-      "text-align:center;padding:12px;";
+    box.style.cssText = "text-align:center;padding:12px;";
 
     box.innerHTML =
       `🔁 Redirecionando para a avaliação…<br>
-       <a href="${END_URL}" style="font-weight:700;" target="_top" rel="noopener">
+       <a href="${END_URL}" style="font-weight:700;" target="_top">
        Ir agora
        </a>`;
 
     document.body.appendChild(box);
 
     setTimeout(() => {
-      try{
-        window.location.replace(END_URL);
-      }catch(_){
-        window.location.href = END_URL;
-      }
+      window.location.replace(END_URL);
     }, 800);
   }
 });

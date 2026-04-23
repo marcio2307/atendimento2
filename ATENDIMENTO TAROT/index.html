@@ -4,37 +4,173 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>Chat + Tarot (tempo real) — Responsivo</title>
+
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
   <style>
     :root{
       --vh:1vh;
       --safe-bottom:env(safe-area-inset-bottom,0px);
       --safe-top:env(safe-area-inset-top,0px);
-      /* Larguras responsivas principais */
-      --chat-max: 500px;   /* mobile padrão */
-      --gap: 26px;
+      --chat-max:500px;
+      --gap:26px;
     }
-    *{box-sizing:border-box}
-    html,body{ height:100%; }
-    body{ font-family:Arial, sans-serif; background:#1d1f21; margin:0; padding:0; color:#111; }
 
-    /* 🎴 Tabuleiro de cartas (#board) — colunas por dispositivo */
+    *{
+      box-sizing:border-box;
+    }
+
+    html,body{
+      height:100%;
+    }
+
+    body{
+      font-family:Arial,sans-serif;
+      background:#1d1f21;
+      margin:0;
+      padding:0;
+      color:#111;
+    }
+
+    /* 🎴 TABULEIRO */
     #board{
       display:grid;
-      gap:1rem;             /* pode trocar por var(--gap) se preferir */
+      gap:1rem;
       justify-content:center;
     }
-    /* 📱 celular → 6 (3 colunas × 2 linhas) */
-@media (max-width: 767px){
-  #board{ grid-template-columns: repeat(3, 1fr); }
-}
-    /* 📲 tablet → 8 (4 colunas) */
-    @media (min-width: 768px) and (max-width: 1024px){
-      #board{ grid-template-columns: repeat(4, 1fr); }
+
+    /* 📱 CELULAR */
+    @media (max-width:767px){
+      #board{
+        grid-template-columns:repeat(3,1fr);
+      }
     }
-    /* 🖥️ pc → 6 (3 em cima, 3 em baixo) */
-    @media (min-width: 1025px){
-      #board{ grid-template-columns: repeat(3, 1fr); }
+
+    /* 📲 TABLET */
+    @media (min-width:768px) and (max-width:1024px){
+      #board{
+        grid-template-columns:repeat(4,1fr);
+      }
+    }
+
+    /* 🖥️ PC */
+    @media (min-width:1025px){
+      #board{
+        grid-template-columns:repeat(3,1fr);
+      }
+    }
+
+    /* =======================================================
+       PASSO 3 - MODAL ESCOLHER CONSULTOR
+    ======================================================= */
+
+    #consultorModal{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.72);
+      z-index:99999;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:14px;
+    }
+
+    #consultorBox{
+      width:100%;
+      max-width:430px;
+      max-height:88vh;
+      overflow-y:auto;
+      background:#ffffff;
+      border-radius:18px;
+      padding:14px;
+      box-shadow:0 18px 40px rgba(0,0,0,.35);
+    }
+
+    #consultorTitulo{
+      font-size:18px;
+      font-weight:700;
+      text-align:center;
+      margin-bottom:12px;
+      color:#111827;
+    }
+
+    #consultorLista{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:10px;
+    }
+
+    .consultor-item{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:10px;
+      border:1px solid #e5e7eb;
+      border-radius:14px;
+      cursor:pointer;
+      transition:.18s;
+      background:#fff;
+    }
+
+    .consultor-item:hover{
+      background:#f8fafc;
+      transform:scale(1.01);
+    }
+
+    .consultor-item img{
+      width:52px;
+      height:52px;
+      border-radius:50%;
+      object-fit:cover;
+      flex-shrink:0;
+      border:2px solid #facc15;
+    }
+
+    .consultor-nome{
+      font-size:15px;
+      font-weight:700;
+      color:#111827;
+      line-height:1.2;
+      word-break:break-word;
+    }
+
+    #consultorFechar{
+      width:100%;
+      margin-top:12px;
+      padding:12px;
+      border:none;
+      border-radius:12px;
+      background:#dc2626;
+      color:#fff;
+      font-weight:700;
+      cursor:pointer;
+      font-size:15px;
+    }
+
+    #consultorFechar:hover{
+      opacity:.95;
+    }
+
+    /* celular */
+    @media (max-width:600px){
+      #consultorBox{
+        max-width:100%;
+        border-radius:16px;
+        padding:12px;
+      }
+
+      .consultor-item{
+        padding:9px;
+      }
+
+      .consultor-item img{
+        width:48px;
+        height:48px;
+      }
+
+      .consultor-nome{
+        font-size:14px;
+      }
     }
 
     /* ====== LAYOUT DE PÁGINA (lado a lado quando couber) ====== */
@@ -374,7 +510,7 @@ document.body.setAttribute("data-role", ROLE);
 const rtEl = document.getElementById("roleTitle");
 if (ROLE === "atendente"){ rtEl.textContent = ""; } else { rtEl.textContent = `Atendimento (Cliente) — sala: ${ROOM}`; }
 
-/* ===== AVATAR + NOMES ATENDENTES ===== */
+/* ===== AVATAR + NOMES ATENDENTES (CORRIGIDO) ===== */
 
 const CONSULTORAS = [
 ["Pai Márcio","https://i.ibb.co/RGZzCfFC/Captura-de-tela-2026-04-02-001847.png"],
@@ -394,74 +530,167 @@ const CONSULTORAS = [
 ["Odara","https://i.ibb.co/tf3Q4wX/Captura-de-tela-2026-04-22-161905.png"]
 ];
 
-const DEFAULT_AVATAR = CONSULTORAS[0][1];
+/* padrão cinza */
+const DEFAULT_AVATAR =
+'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 96 96"><circle cx="48" cy="32" r="16" fill="%23cccccc"/><rect x="16" y="56" width="64" height="28" rx="14" fill="%23cccccc"/></svg>';
 
 const AVATAR_KEY = `avatar:${ROOM}`;
 const NAME_KEY   = `name:${ROOM}`;
+
 const REMOTE_AVATAR_KEY = `remoteAvatar:${ROOM}`;
 const REMOTE_NAME_KEY   = `remoteName:${ROOM}`;
 
 const avatarImg = document.getElementById("avatarImg");
 const roleTitle = document.getElementById("roleTitle");
 
+/* =====================================================
+   SALVAR LOCAL (ATENDENTE)
+===================================================== */
 function setLocalAvatar(nome,foto){
+
   sessionStorage.setItem(AVATAR_KEY,foto);
   sessionStorage.setItem(NAME_KEY,nome);
 
   avatarImg.src = foto;
-  roleTitle.textContent = nome;
+  avatarImg.style.display = "block";
+
+  if(roleTitle){
+    roleTitle.textContent = nome;
+  }
 }
 
+/* =====================================================
+   RECEBER REMOTO (CLIENTE)
+===================================================== */
 function setRemoteAvatar(nome,foto){
+
   sessionStorage.setItem(REMOTE_AVATAR_KEY,foto);
   sessionStorage.setItem(REMOTE_NAME_KEY,nome);
 
   avatarImg.src = foto;
-  roleTitle.textContent = nome;
+  avatarImg.style.display = "block";
+
+  if(roleTitle){
+    roleTitle.textContent = nome;
+  }
 }
 
+/* =====================================================
+   LISTA CONSULTOR
+===================================================== */
 function abrirListaConsultores(){
 
-  let nomes = CONSULTORAS.map((c,i)=>`${i+1} - ${c[0]}`).join("\n");
+  let modal = document.getElementById("consultorModal");
 
-  let escolha = prompt("Escolha o atendente:\n\n"+nomes);
+  if(modal){
+    modal.style.display = "flex";
+    return;
+  }
 
-  if(!escolha) return;
+  modal = document.createElement("div");
+  modal.id = "consultorModal";
 
-  escolha = parseInt(escolha)-1;
+  modal.innerHTML = `
+    <div id="consultorBox">
+      <div id="consultorTitulo">Escolha o Consultor</div>
+      <div id="consultorLista"></div>
+      <button id="consultorFechar">Fechar</button>
+    </div>
+  `;
 
-  if(escolha < 0 || escolha >= CONSULTORAS.length) return;
+  document.body.appendChild(modal);
 
-  const nome = CONSULTORAS[escolha][0];
-  const foto = CONSULTORAS[escolha][1];
+  const lista = document.getElementById("consultorLista");
 
-  setLocalAvatar(nome,foto);
+  CONSULTORAS.forEach(item=>{
 
-  socket.emit("chat_image",{
-    dataUrl:foto,
-    alt:"__avatar__|"+nome
+    const nome = item[0];
+    const foto = item[1];
+
+    const div = document.createElement("div");
+    div.className = "consultor-item";
+
+    div.innerHTML = `
+      <img src="${foto}">
+      <div class="consultor-nome">${nome}</div>
+    `;
+
+    div.onclick = ()=>{
+
+      /* atualiza atendente */
+      setLocalAvatar(nome,foto);
+
+      /* envia em tempo real pro cliente */
+      socket.emit("chat_image",{
+        dataUrl: foto,
+        alt: "__avatar__|" + nome
+      });
+
+      modal.style.display = "none";
+    };
+
+    lista.appendChild(div);
+
   });
+
+  document.getElementById("consultorFechar").onclick = ()=>{
+    modal.style.display = "none";
+  };
+
+  modal.onclick = (e)=>{
+    if(e.target.id === "consultorModal"){
+      modal.style.display = "none";
+    }
+  };
+
+  modal.style.display = "flex";
 }
 
+/* =====================================================
+   INICIAR AVATAR
+===================================================== */
 function initAvatar(){
 
-  avatarImg.src = DEFAULT_AVATAR;
-
+  /* =======================
+     ATENDENTE
+  ======================= */
   if(ROLE === "atendente"){
 
-    const nome = sessionStorage.getItem(NAME_KEY) || CONSULTORAS[0][0];
-    const foto = sessionStorage.getItem(AVATAR_KEY) || CONSULTORAS[0][1];
+    const nome = sessionStorage.getItem(NAME_KEY);
+    const foto = sessionStorage.getItem(AVATAR_KEY);
 
-    setLocalAvatar(nome,foto);
+    if(nome && foto){
+      setLocalAvatar(nome,foto);
+    }else{
+      avatarImg.src = DEFAULT_AVATAR;
+      avatarImg.style.display = "block";
+
+      if(roleTitle){
+        roleTitle.textContent = "Escolher Consultor";
+      }
+    }
 
     avatarImg.onclick = abrirListaConsultores;
+  }
 
-  }else{
+  /* =======================
+     CLIENTE
+  ======================= */
+  else{
 
-    const nome = sessionStorage.getItem(REMOTE_NAME_KEY) || "Atendimento";
-    const foto = sessionStorage.getItem(REMOTE_AVATAR_KEY) || DEFAULT_AVATAR;
+    const nome = sessionStorage.getItem(REMOTE_NAME_KEY);
+    const foto = sessionStorage.getItem(REMOTE_AVATAR_KEY);
 
-    setRemoteAvatar(nome,foto);
+    /* cliente começa oculto */
+    if(nome && foto){
+      setRemoteAvatar(nome,foto);
+    }else{
+      avatarImg.style.display = "none";
+
+      if(roleTitle){
+        roleTitle.textContent = "Atendimento";
+      }
+    }
   }
 }
 
@@ -847,123 +1076,270 @@ socket.on("message_seen", ({ id }) => markSeen(id));
 
 /* ===== chat_image: imagens e META (avatar/reaction/reply-fallback) ===== */
 socket.on("chat_image", ({ from, dataUrl, alt, id, reply }) => {
+
   if (shouldIgnoreInbound()) return;
 
- if(typeof alt === "string" && alt.startsWith("__avatar__|")){
+  /* ==================================================
+     AVATAR CONSULTOR EM TEMPO REAL
+  ================================================== */
+  if (typeof alt === "string" && alt.startsWith("__avatar__|")) {
 
-   const nome = alt.replace("__avatar__|","");
-   setRemoteAvatar(nome,dataUrl);
-   return;
-}
+    const nome = alt.replace("__avatar__|", "");
 
-  if (typeof alt === 'string' && alt.startsWith("__reaction__|")){
+    setRemoteAvatar(nome, dataUrl);
+
+    return;
+  }
+
+  /* ==================================================
+     REAÇÃO
+  ================================================== */
+  if (typeof alt === "string" && alt.startsWith("__reaction__|")) {
+
     const [, msgId, emoji, uid] = alt.split("|");
+
     if (uid === UID) return;
-    const bubble = chatBody.querySelector(`.message[data-id="${msgId}"] .bubble`);
-    if (bubble){
+
+    const bubble = chatBody.querySelector(
+      `.message[data-id="${msgId}"] .bubble`
+    );
+
+    if (bubble) {
       toggleReactionLocal(msgId, emoji, uid);
       renderReactionsRow(bubble, msgId);
     }
+
     return;
   }
 
-  if (typeof alt === 'string' && alt.startsWith("__reply__|")){
+  /* ==================================================
+     RESPOSTA / REPLY
+  ================================================== */
+  if (typeof alt === "string" && alt.startsWith("__reply__|")) {
+
     const [, msgId, ...rest] = alt.split("|");
+
     const preview = decodeURIComponent(rest.join("|"));
-    const holder = chatBody.querySelector(`.message[data-id="${msgId}"] .bubble`);
-    if (holder){
-      if (!holder.querySelector('.reply-quote')){
-        const q=document.createElement('div'); q.className='reply-quote'; q.textContent=preview; holder.insertBefore(q, holder.firstChild);
+
+    const holder = chatBody.querySelector(
+      `.message[data-id="${msgId}"] .bubble`
+    );
+
+    if (holder) {
+
+      if (!holder.querySelector(".reply-quote")) {
+
+        const q = document.createElement("div");
+        q.className = "reply-quote";
+        q.textContent = preview;
+
+        holder.insertBefore(q, holder.firstChild);
       }
+
     } else {
+
       pendingReplyMeta[msgId] = preview;
     }
+
     return;
   }
 
+  /* ==================================================
+     IMAGEM NORMAL
+  ================================================== */
   const s = from === "attendant" ? "attendant" : "client";
+
   const mid = id || genUID();
-  addImageMessage(dataUrl, s, alt || "Imagem", mid, false, reply || null);
-  history.push({ t:"img", sender:s, dataUrl, alt, id: mid, seen:false, reply: reply || null }); saveHistory();
+
+  addImageMessage(
+    dataUrl,
+    s,
+    alt || "Imagem",
+    mid,
+    false,
+    reply || null
+  );
+
+  history.push({
+    t: "img",
+    sender: s,
+    dataUrl,
+    alt,
+    id: mid,
+    seen: false,
+    reply: reply || null
+  });
+
+  saveHistory();
+
   if (mySide !== s) playSound("sndRecv");
 });
 
-socket.on("chat_audio", ({ from, dataUrl, durSec=0, id, reply }) => {
+/* ==================================================
+   ÁUDIO
+================================================== */
+socket.on("chat_audio", ({ from, dataUrl, durSec = 0, id, reply }) => {
+
   if (shouldIgnoreInbound()) return;
+
   const s = from === "attendant" ? "attendant" : "client";
+
   const mid = id || genUID();
-  addAudioMessage(dataUrl, s, durSec, mid, false, reply || null);
-  history.push({ t:"aud", sender:s, dataUrl, dur: durSec, id: mid, seen:false, reply: reply || null }); saveHistory();
+
+  addAudioMessage(
+    dataUrl,
+    s,
+    durSec,
+    mid,
+    false,
+    reply || null
+  );
+
+  history.push({
+    t: "aud",
+    sender: s,
+    dataUrl,
+    dur: durSec,
+    id: mid,
+    seen: false,
+    reply: reply || null
+  });
+
+  saveHistory();
+
   if (mySide !== s) playSound("sndRecv");
 });
 
-/* ===== Reações recebidas via evento normal ===== */
-socket.on("message_reaction", ({ id, emoji, uid })=>{
+/* ==================================================
+   REAÇÕES
+================================================== */
+socket.on("message_reaction", ({ id, emoji, uid }) => {
+
   if (shouldIgnoreInbound()) return;
   if (uid === UID) return;
-  const msg = chatBody.querySelector(`.message[data-id="${id}"] .bubble`);
+
+  const msg = chatBody.querySelector(
+    `.message[data-id="${id}"] .bubble`
+  );
+
   if (!msg) return;
+
   toggleReactionLocal(id, emoji, uid);
   renderReactionsRow(msg, id);
 });
 
-/* ===== Deleção recebida ===== */
+/* ==================================================
+   DELETAR
+================================================== */
 socket.on("delete_message", ({ id }) => {
+
   if (shouldIgnoreInbound()) return;
   if (!id) return;
+
   removeMessageDom(id);
   removeFromHistory(id);
-  if (reactionsMap[id]) { delete reactionsMap[id]; saveReactions(); }
+
+  if (reactionsMap[id]) {
+    delete reactionsMap[id];
+    saveReactions();
+  }
 });
 
-/* ===== Digitando (tempo real, sem infinito) ===== */
+/* ==================================================
+   DIGITANDO
+================================================== */
 const typingHint = document.getElementById("typingHint");
 let typingHideTimer = null;
 
-/* NOVO: estado do outro lado gravando? controla texto da bolha */
 let otherRecActive = false;
-const typingTextNode = document.querySelector('#typingHint .typing-text');
 
-function setTypingText(txt){ if (typingTextNode) typingTextNode.textContent = txt; }
+const typingTextNode =
+document.querySelector("#typingHint .typing-text");
+
+function setTypingText(txt){
+  if (typingTextNode) typingTextNode.textContent = txt;
+}
 
 function showTypingBubble(){
+
   typingHint.style.display = "block";
+
   scrollDown();
+
   clearTimeout(typingHideTimer);
-  typingHideTimer = setTimeout(()=>{ typingHint.style.display="none"; }, 2000);
+
+  typingHideTimer = setTimeout(()=>{
+    typingHint.style.display = "none";
+  },2000);
 }
+
 function hideTypingBubble(){
+
   typingHint.style.display = "none";
+
   clearTimeout(typingHideTimer);
+
   typingHideTimer = null;
 }
 
 msgInput.addEventListener("input", ()=>{
-  if (ROLE === "cliente" && !isPaired) return;
-  updateActionBtnState();
-  socket.emit("typing", { isTyping: msgInput.value.trim().length > 0 });
-  clearTimeout(window.__typingEmitTimer);
-  window.__typingEmitTimer = setTimeout(()=>{ socket.emit("typing", { isTyping:false }); }, 1500);
-});
-msgInput.addEventListener("blur", ()=>{ socket.emit("typing", { isTyping:false }); });
-msgInput.addEventListener("keydown", (e)=>{ if (e.key === "Enter"){ e.preventDefault(); if (msgInput.value.trim()) sendMessage(); } });
 
-/* SUBSTITUÍDO: agora respeita prioridade da gravação */
+  if (ROLE === "cliente" && !isPaired) return;
+
+  updateActionBtnState();
+
+  socket.emit("typing", {
+    isTyping: msgInput.value.trim().length > 0
+  });
+
+  clearTimeout(window.__typingEmitTimer);
+
+  window.__typingEmitTimer = setTimeout(()=>{
+    socket.emit("typing", { isTyping:false });
+  },1500);
+});
+
+msgInput.addEventListener("blur", ()=>{
+  socket.emit("typing", { isTyping:false });
+});
+
+msgInput.addEventListener("keydown", (e)=>{
+
+  if (e.key === "Enter") {
+
+    e.preventDefault();
+
+    if (msgInput.value.trim()) sendMessage();
+  }
+});
+
+/* ==================================================
+   RECEBER DIGITANDO
+================================================== */
 socket.on("typing", ({ from, isTyping }) => {
+
   if (shouldIgnoreInbound()) return;
-  const isOther = ((from === "attendant" && ROLE === "cliente") || (from === "client" && ROLE === "atendente"));
+
+  const isOther =
+    ((from === "attendant" && ROLE === "cliente") ||
+     (from === "client" && ROLE === "atendente"));
+
   if (!isOther) return;
 
-  if (otherRecActive){
-    setTypingText('gravando áudio…');
+  if (otherRecActive) {
+
+    setTypingText("gravando áudio…");
     showTypingBubble();
     return;
   }
 
-  if (isTyping){
-    setTypingText('digitando…');
+  if (isTyping) {
+
+    setTypingText("digitando…");
     showTypingBubble();
+
   } else {
+
     hideTypingBubble();
   }
 });

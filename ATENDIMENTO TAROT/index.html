@@ -2218,44 +2218,43 @@ endBtn.addEventListener("click", ()=> socket.emit("end_conversation"));
 
 /* ===== LENORMAND ===== */
 const DECK = [
-  { n: 0, nome: "ANCORA", img: "cards/ancora.jpg" },
-  { n: 1, nome: "ANEL", img: "cards/anel.jpg" },
-  { n: 2, nome: "ARVORE", img: "cards/arvore.jpg" },
-  { n: 3, nome: "CACHORRO", img: "cards/cachorro.jpg" },
-  { n: 4, nome: "CAIXÃO", img: "cards/caixao.jpg" },
-  { n: 5, nome: "CAMINHOS", img: "cards/caminhos.jpg" },
-  { n: 6, nome: "CASA", img: "cards/casa.jpg" },
-  { n: 7, nome: "CAVALEIRO", img: "cards/cavaleiro.jpg" },
-  { n: 8, nome: "CEGONHA", img: "cards/cegonha.jpg" },
-  { n: 9, nome: "CHAVE", img: "cards/chave.jpg" },
-  { n: 10, nome: "CHICOTE", img: "cards/chicote.jpg" },
-  { n: 11, nome: "COBRA", img: "cards/cobra.jpg" },
-  { n: 12, nome: "CORAÇÃO", img: "cards/coracao.jpg" },
-  { n: 13, nome: "CRIANÇA", img: "cards/crianca.jpg" },
-  { n: 14, nome: "CRUZ", img: "cards/cruz.jpg" },
-  { n: 15, nome: "ENVELOPE", img: "cards/envelope.jpg" },
-  { n: 16, nome: "ESTRELA", img: "cards/estrela.jpg" },
-  { n: 17, nome: "FOICE", img: "cards/foice.jpg" },
-  { n: 18, nome: "FONTE", img: "cards/fonte.jpg" },
-  { n: 19, nome: "HOMEN", img: "cards/homen.jpg" },
-  { n: 20, nome: "LIRIOS", img: "cards/lirios.jpg" },
-  { n: 21, nome: "LIVRO", img: "cards/livro.jpg" },
-  { n: 22, nome: "LUA", img: "cards/lua.jpg" },
-  { n: 23, nome: "MONTANHA", img: "cards/montanha.jpg" },
-  { n: 24, nome: "MULHER", img: "cards/mulher.jpg" },
-  { n: 25, nome: "NAVIO", img: "cards/navio.jpg" },
-  { n: 26, nome: "PASSAROS", img: "cards/passaros.jpg" },
-  { n: 27, nome: "PEIXES", img: "cards/peixes.jpg" },
-  { n: 28, nome: "RAPOSA", img: "cards/raposa.jpg" },
-  { n: 29, nome: "RATO", img: "cards/rato.jpg" },
-  { n: 30, nome: "ROSAS", img: "cards/rosas.jpg" },
-  { n: 31, nome: "SOL", img: "cards/sol.jpg" },
-  { n: 32, nome: "TEMPESTADE", img: "cards/tempestade.jpg" },
-  { n: 33, nome: "TORRE", img: "cards/torre.jpg" },
-  { n: 34, nome: "TREVO", img: "cards/trevo.jpg" },
-  { n: 35, nome: "URSO", img: "cards/urso.jpg" }
+  { n: 1,  nome: "CAVALEIRO",  img: "cards/cavaleiro.jpg" },
+  { n: 2,  nome: "TREVO",      img: "cards/trevo.jpg" },
+  { n: 3,  nome: "NAVIO",      img: "cards/navio.jpg" },
+  { n: 4,  nome: "CASA",       img: "cards/casa.jpg" },
+  { n: 5,  nome: "ARVORE",     img: "cards/arvore.jpg" },
+  { n: 6,  nome: "NUVENS",     img: "cards/tempestade.jpg" },
+  { n: 7,  nome: "COBRA",      img: "cards/cobra.jpg" },
+  { n: 8,  nome: "CAIXAO",     img: "cards/caixao.jpg" },
+  { n: 9,  nome: "ROSAS",      img: "cards/rosas.jpg" },
+  { n: 10, nome: "FOICE",      img: "cards/foice.jpg" },
+  { n: 11, nome: "CHICOTE",    img: "cards/chicote.jpg" },
+  { n: 12, nome: "PASSAROS",   img: "cards/passaros.jpg" },
+  { n: 13, nome: "CRIANCA",    img: "cards/crianca.jpg" },
+  { n: 14, nome: "RAPOSA",     img: "cards/raposa.jpg" },
+  { n: 15, nome: "URSO",       img: "cards/urso.jpg" },
+  { n: 16, nome: "ESTRELA",    img: "cards/estrela.jpg" },
+  { n: 17, nome: "CEGONHA",    img: "cards/cegonha.jpg" },
+  { n: 18, nome: "CACHORRO",   img: "cards/cachorro.jpg" },
+  { n: 19, nome: "TORRE",      img: "cards/torre.jpg" },
+  { n: 20, nome: "JARDIM",     img: "cards/jardim.jpg" },
+  { n: 21, nome: "MONTANHA",   img: "cards/montanha.jpg" },
+  { n: 22, nome: "CAMINHOS",   img: "cards/caminhos.jpg" },
+  { n: 23, nome: "RATO",       img: "cards/rato.jpg" },
+  { n: 24, nome: "CORACAO",    img: "cards/coracao.jpg" },
+  { n: 25, nome: "ANEL",       img: "cards/anel.jpg" },
+  { n: 26, nome: "LIVRO",      img: "cards/livro.jpg" },
+  { n: 27, nome: "ENVELOPE",   img: "cards/envelope.jpg" },
+  { n: 28, nome: "HOMEM",      img: "cards/homem.jpg" },
+  { n: 29, nome: "MULHER",     img: "cards/mulher.jpg" },
+  { n: 30, nome: "LIRIOS",    img: "cards/lirios.jpg" },
+  { n: 31, nome: "SOL",        img: "cards/sol.jpg" },
+  { n: 32, nome: "LUA",        img: "cards/lua.jpg" },
+  { n: 33, nome: "CHAVE",      img: "cards/chave.jpg" },
+  { n: 34, nome: "PEIXES",     img: "cards/peixes.jpg" },
+  { n: 35, nome: "ANCORA",     img: "cards/ancora.jpg" },
+  { n: 36, nome: "CRUZ",       img: "cards/cruz.jpg" }
 ];
-
 const board = document.getElementById("board");
 let selecionadas = [];
 
@@ -2286,7 +2285,7 @@ function montarCarta(deckIndex){
   const slot=document.createElement("div"); slot.className="slot";
   const card=document.createElement("div"); card.className="card"; card.tabIndex=0;
   const back=document.createElement("div"); back.className="face back";
-  const backImg=document.createElement("img"); backImg.src="cards/back.png"; backImg.alt="Verso"; backImg.decoding="async"; backImg.loading="eager"; backImg.style.width="100%"; backImg.style.height="100%"; backImg.style.objectFit="cover"; back.appendChild(backImg);
+  const backImg=document.createElement("img"); backImg.src="cards/back.jpg"; backImg.alt="Verso"; backImg.decoding="async"; backImg.loading="eager"; backImg.style.width="100%"; backImg.style.height="100%"; backImg.style.objectFit="cover"; back.appendChild(backImg);
   const front=document.createElement("div"); front.className="face front";
   const img=document.createElement("img"); img.alt=data.nome; img.src=data.img; img.style.width="100%"; img.style.height="100%"; img.style.objectFit="cover"; front.appendChild(img);
   const flip=()=>{ card.classList.toggle("flipped"); };

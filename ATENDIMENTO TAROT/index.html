@@ -60,6 +60,14 @@
       }
     }
 
+    /* ===== PRINT DAS CARTAS SEM FUNDO VERDE ===== */
+    .message .bubble.tarot-print{
+      background:transparent !important;
+      padding:0 !important;
+      box-shadow:none !important;
+    }
+
+  </style>
     /* =======================================================
        PASSO 3 - MODAL ESCOLHER CONSULTOR
     ======================================================= */
@@ -391,7 +399,12 @@
   margin-left:auto;
   margin-right:4px;
 }
-
+/* PRINT DAS CARTAS - SEM FUNDO VERDE */
+.message.mine .bubble.tarot-print{
+  background:transparent !important;
+  padding:0 !important;
+  box-shadow:none !important;
+}
 .message.theirs .bubble{
   background:#fff;
   color:#222;
@@ -1412,65 +1425,188 @@ function addMessage(text, sender, id = genUID(), seen = false, reply=null){
 
 function addImageMessage(dataUrl, sender, alt="Imagem", id = genUID(), seen=false, reply=null){
   reply = ensureReplyFallback(id, reply);
-  const d=document.createElement('div'); d.classList.add('message', sender); d.dataset.id=id;
-  const isMine=(sender===mySide); d.classList.add(isMine?'mine':'theirs');
-  const bubble=document.createElement('div'); bubble.className='bubble';
-  const q=makeReplyNode(reply); if(q) bubble.appendChild(q);
-  const w=document.createElement('div'); w.className='image';
-  const i=document.createElement('img'); i.src=dataUrl; i.alt=alt; i.loading="lazy"; i.decoding="async"; w.appendChild(i); bubble.appendChild(w);
+
+  const d=document.createElement('div');
+  d.classList.add('message', sender);
+  d.dataset.id=id;
+
+  const isMine=(sender===mySide);
+  d.classList.add(isMine?'mine':'theirs');
+
+  const bubble=document.createElement('div');
+  bubble.className='bubble' + (alt === 'Leitura de Tarot' ? ' tarot-print' : '');
+
+  const q=makeReplyNode(reply);
+  if(q) bubble.appendChild(q);
+
+  const w=document.createElement('div');
+  w.className='image';
+
+  const i=document.createElement('img');
+  i.src=dataUrl;
+  i.alt=alt;
+  i.loading="lazy";
+  i.decoding="async";
+
+  w.appendChild(i);
+  bubble.appendChild(w);
 
   attachTapTrash(bubble,id,isMine);
   attachSwipeToReply(bubble,id);
+
   if (!isMine) {
     attachLongPressOnBubble(bubble,id);
+
     w.addEventListener('click', (e)=>{
       const {clientX:x, clientY:y}=e;
+
       openReactPicker(x,y,(choice)=>{
         if(choice==='__reply__'){
-          setReply({ id, preview:'🖼️ ' + (i.alt||'Imagem') });
+          setReply({
+            id,
+            preview:'🖼️ ' + (i.alt||'Imagem')
+          });
         } else {
           toggleReactionLocal(id, choice, UID);
           renderReactionsRow(bubble, id);
-          try{ socket.emit("message_reaction", { id, emoji: choice, uid: UID }); }catch(_){}
-          try{ socket.emit("chat_image", { dataUrl: "data:application/json;base64,MA==", alt: `__reaction__|${id}|${choice}|${UID}` }); }catch(_){}
+
+          try{
+            socket.emit("message_reaction", {
+              id,
+              emoji: choice,
+              uid: UID
+            });
+          }catch(_){}
+
+          try{
+            socket.emit("chat_image", {
+              dataUrl: "data:application/json;base64,MA==",
+              alt: `__reaction__|${id}|${choice}|${UID}`
+            });
+          }catch(_){}
         }
       });
     });
   }
 
   d.appendChild(bubble);
-  if(isMine){ const meta=document.createElement('div'); meta.className='meta'; const rc=document.createElement('span'); rc.className='receipt'+(seen?' seen':''); rc.id=`rcp-${id}`; rc.innerHTML='<span class="check">✓</span><span class="check">✓</span>'; meta.appendChild(rc); d.appendChild(meta); }
-  chatBody.appendChild(d); renderReactionsRow(bubble, id); scrollDown();
+
+  if(isMine){
+    const meta=document.createElement('div');
+    meta.className='meta';
+
+    const rc=document.createElement('span');
+    rc.className='receipt'+(seen?' seen':'');
+    rc.id=`rcp-${id}`;
+
+    rc.innerHTML='<span class="check">✓</span><span class="check">✓</span>';
+
+    meta.appendChild(rc);
+    d.appendChild(meta);
+  }
+
+  chatBody.appendChild(d);
+  renderReactionsRow(bubble, id);
+  scrollDown();
 }
+
 
 function addAudioMessage(dataUrl, sender, durSec=0, id = genUID(), seen=false, reply=null){
   reply = ensureReplyFallback(id, reply);
-  const d=document.createElement('div'); d.classList.add('message', sender); d.dataset.id=id;
-  const isMine=(sender===mySide); d.classList.add(isMine?'mine':'theirs');
-  const bubble=document.createElement('div'); bubble.className='bubble';
-  const q=makeReplyNode(reply); if(q) bubble.appendChild(q);
-  const wrap=document.createElement('div'); wrap.className='audio-wrap';
-  const audio=document.createElement('audio'); audio.controls=true; audio.preload="metadata"; audio.src=dataUrl; wrap.appendChild(audio);
-  const tools=document.createElement('div'); tools.className='audio-toolbar';
-  const backBtn=document.createElement('button'); backBtn.className='rewind-btn'; backBtn.type='button'; backBtn.textContent='⏪ 5s'; backBtn.title='Voltar 5 segundos';
-  backBtn.addEventListener('click', async (e)=>{ e.stopPropagation(); if(audio.readyState<1) await new Promise(r=>audio.addEventListener('loadedmetadata', r, {once:true})); try{ audio.currentTime=Math.max(0, audio.currentTime-5);}catch(_){} });
-  tools.appendChild(backBtn); wrap.appendChild(tools);
-  const dur=document.createElement('div'); dur.className='duration'; dur.textContent = durSec ? `⏱️ ${String(Math.floor(durSec/60)).padStart(2,'0')}:${String(Math.floor(durSec%60)).padStart(2,'0')}` : 'Áudio';
+
+  const d=document.createElement('div');
+  d.classList.add('message', sender);
+  d.dataset.id=id;
+
+  const isMine=(sender===mySide);
+  d.classList.add(isMine?'mine':'theirs');
+
+  const bubble=document.createElement('div');
+  bubble.className='bubble';
+
+  const q=makeReplyNode(reply);
+  if(q) bubble.appendChild(q);
+
+  const wrap=document.createElement('div');
+  wrap.className='audio-wrap';
+
+  const audio=document.createElement('audio');
+  audio.controls=true;
+  audio.preload="metadata";
+  audio.src=dataUrl;
+  wrap.appendChild(audio);
+
+  const tools=document.createElement('div');
+  tools.className='audio-toolbar';
+
+  const backBtn=document.createElement('button');
+  backBtn.className='rewind-btn';
+  backBtn.type='button';
+  backBtn.textContent='⏪ 5s';
+  backBtn.title='Voltar 5 segundos';
+
+  backBtn.addEventListener('click', async (e)=>{
+    e.stopPropagation();
+
+    if(audio.readyState<1)
+      await new Promise(r=>audio.addEventListener('loadedmetadata', r, {once:true}));
+
+    try{
+      audio.currentTime=Math.max(0, audio.currentTime-5);
+    }catch(_){}
+  });
+
+  tools.appendChild(backBtn);
+  wrap.appendChild(tools);
+
+  const dur=document.createElement('div');
+  dur.className='duration';
+  dur.textContent = durSec
+    ? `⏱️ ${String(Math.floor(durSec/60)).padStart(2,'0')}:${String(Math.floor(durSec%60)).padStart(2,'0')}`
+    : 'Áudio';
+
   wrap.appendChild(dur);
 
   if (isMine){
-    wrap.addEventListener('click',(e)=>{ if(e.target.closest('button')) return; if(audio.paused){ audio.play().catch(()=>{});} else { audio.pause(); } });
+    wrap.addEventListener('click',(e)=>{
+      if(e.target.closest('button')) return;
+
+      if(audio.paused){
+        audio.play().catch(()=>{});
+      } else {
+        audio.pause();
+      }
+    });
   } else {
     wrap.addEventListener('click',(e)=>{
       if (e.target.closest('button')) return;
+
       const {clientX:x, clientY:y}=e;
+
       openReactPicker(x,y,(choice)=>{
-        if(choice==='__reply__'){ setReply({ id, preview:'🎤 Áudio' }); }
-        else {
+        if(choice==='__reply__'){
+          setReply({
+            id,
+            preview:'🎤 Áudio'
+          });
+        } else {
           toggleReactionLocal(id, choice, UID);
           renderReactionsRow(bubble, id);
-          try{ socket.emit("message_reaction", { id, emoji: choice, uid: UID }); }catch(_){}
-          try{ socket.emit("chat_image", { dataUrl: "data:application/json;base64,MA==", alt: `__reaction__|${id}|${choice}|${UID}` }); }catch(_){ }
+
+          try{
+            socket.emit("message_reaction", {
+              id,
+              emoji: choice,
+              uid: UID
+            });
+          }catch(_){}
+
+          try{
+            socket.emit("chat_image", {
+              dataUrl: "data:application/json;base64,MA==",
+              alt: `__reaction__|${id}|${choice}|${UID}`
+            });
+          }catch(_){}
         }
       });
     });
@@ -1478,42 +1614,107 @@ function addAudioMessage(dataUrl, sender, durSec=0, id = genUID(), seen=false, r
 
   bubble.appendChild(wrap);
 
-  if (!isMine) attachLongPressAudio(wrap,id);
+  if (!isMine)
+    attachLongPressAudio(wrap,id);
+
   attachTapTrash(bubble,id,isMine);
   attachSwipeToReply(bubble,id);
-  if (!isMine) attachLongPressOnBubble(bubble,id);
+
+  if (!isMine)
+    attachLongPressOnBubble(bubble,id);
 
   d.appendChild(bubble);
-  if(isMine){ const meta=document.createElement('div'); meta.className='meta'; const rc=document.createElement('span'); rc.className='receipt'+(seen?' seen':''); rc.id=`rcp-${id}`; rc.innerHTML='<span class="check">✓</span><span class="check">✓</span>'; meta.appendChild(rc); d.appendChild(meta); }
-  chatBody.appendChild(d); renderReactionsRow(bubble, id); scrollDown();
+
+  if(isMine){
+    const meta=document.createElement('div');
+    meta.className='meta';
+
+    const rc=document.createElement('span');
+    rc.className='receipt'+(seen?' seen':'');
+    rc.id=`rcp-${id}`;
+
+    rc.innerHTML='<span class="check">✓</span><span class="check">✓</span>';
+
+    meta.appendChild(rc);
+    d.appendChild(meta);
+  }
+
+  chatBody.appendChild(d);
+  renderReactionsRow(bubble, id);
+  scrollDown();
 
   if (!isMine){
-    audio.addEventListener('ended', ()=>{ try{ socket.emit('audio_listened', { id }); }catch(_){ } });
+    audio.addEventListener('ended', ()=>{
+      try{
+        socket.emit('audio_listened', { id });
+      }catch(_){}
+    });
   }
 }
 
-function markSeen(id){ const r=document.getElementById(`rcp-${id}`); if(r) r.classList.add('seen'); const idx=history.findIndex(h=>h.id===id); if(idx>=0){ history[idx].seen=true; saveHistory(); } }
+
+function markSeen(id){
+  const r=document.getElementById(`rcp-${id}`);
+
+  if(r)
+    r.classList.add('seen');
+
+  const idx=history.findIndex(h=>h.id===id);
+
+  if(idx>=0){
+    history[idx].seen=true;
+    saveHistory();
+  }
+}
+
 
 /* ===== Recebimento ===== */
-function shouldIgnoreInbound(){ return (ROLE === "cliente" && !isPaired); }
+function shouldIgnoreInbound(){
+  return (ROLE === "cliente" && !isPaired);
+}
 
 socket.on("chat_message", ({ from, text, id, reply }) => {
   if (shouldIgnoreInbound()) return;
+
   const s = from === "attendant" ? "attendant" : "client";
-  addMessage(text, s, id, false, reply || null);
-  history.push({ t:"text", sender:s, text, id, seen:false, reply: reply || null }); saveHistory();
+
+  addMessage(
+    text,
+    s,
+    id,
+    false,
+    reply || null
+  );
+
+  history.push({
+    t:"text",
+    sender:s,
+    text,
+    id,
+    seen:false,
+    reply: reply || null
+  });
+
+  saveHistory();
+
   if (mySide !== s) {
     playSound("sndRecv");
-    if (document.visibilityState === 'visible') { try { socket.emit("message_seen", { id }); } catch(_){} }
+
+    if (document.visibilityState === 'visible') {
+      try{
+        socket.emit("message_seen", { id });
+      }catch(_){}
+    }
   }
 });
+
 socket.on("message_seen", ({ id }) => markSeen(id));
+
 
 /* ===== chat_image: imagens e META (avatar/reaction/reply-fallback) ===== */
 socket.on("chat_image", ({ from, dataUrl, alt, id, reply }) => {
 
   if (shouldIgnoreInbound()) return;
-
   /* ==================================================
      AVATAR CONSULTOR EM TEMPO REAL
   ================================================== */
